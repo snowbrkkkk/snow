@@ -1,0 +1,167 @@
+-- WindUI-with-Label.lua
+-- Carrega WindUI oficial e adiciona :Label() para Tab e Section (compatível com versões recentes)
+
+--⇢ Carregar WindUI original com proteção
+local ok, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+end)
+
+if not ok or not WindUI then
+    warn("[WindUI Patch] Falha ao carregar WindUI original.")
+    return
+end
+
+----------------------------------------------------------------
+-- Utilidades internas
+----------------------------------------------------------------
+local function _findContentContainer(obj)
+    -- tenta campos comuns usados em libs de UI
+    local tryFields = { "Content", "Container", "Body", "Holder", "Section", "SectionBody", "SectionContent", "Scroll", "Scrolling", "List", "Page" }
+    for _, f in ipairs(tryFields) do
+        local okFind, v = pcall(function() return obj[f] end)
+        if okFind and typeof(v) ~= "nil" and typeof(v) ~= "function" then
+            if typeof(v) == "Instance" then
+                return v
+            end
+        end
+    end
+    -- se obj já for um Instance (Frame/ScrollingFrame/etc.), usa ele
+    if typeof(obj) == "Instance" then
+        return obj
+    end
+    -- tenta achar algo parecendo container varrendo propriedades
+    for k, v in pairs(obj) do
+        if typeof(v) == "Instance" and v:IsA("GuiObject") then
+            return v
+        end
+    end
+    return nil
+end
+
+local function _injectLabelMethod(intoObj)
+    if typeof(intoObj) ~= "table" then return end
+    if intoObj.Label ~= nil then return end -- já tem
+
+    intoObj.Label = function(self, data)
+        data = data or {}
+        local text = tostring(data.Title or data.Text or "Label")
+        local parent = _findContentContainer(self)
+        if not parent then
+            warn("[WindUI Patch] Não foi possível encontrar container para Label; usando CoreGui fallback.")
+            local sg = Instance.new("ScreenGui")
+            sg.Name = "WindUI_Label_Fallback"
+            sg.Parent = game.CoreGui
+            parent = sg
+        end
+
+        -- Frame do label
+        local row = Instance.new("Frame")
+        row.Name = "WindUILabelRow"
+        row.BackgroundTransparency = 1
+        row.Size = UDim2.new(1, -6, 0, 24)
+        row.Parent = parent
+
+        -- Layout opcional (se container não tiver)
+        if not parent:FindFirstChildOfClass("UIListLayout") then
+            local ll = Instance.new("UIListLayout")
+            ll.Padding = UDim.new(0, 6)
+            ll.SortOrder = Enum.SortOrder.LayoutOrder
+            ll.Parent = parent
+        end
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Name = "Label"
+        lbl.BackgroundTransparency = 1
+        lbl.Size = UDim2.new(1, 0, 1, 0)
+        lbl.Text = text
+        lbl.TextColor3 = Color3.fromRGB(235, 235, 235)
+        lbl.Font = Enum.Font.GothamBold
+        lbl.TextSize = tonumber(data.TextSize) or 16
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = row
+
+        -- retorno estilo WindUI (objeto com Set/Destroy/etc.)
+        local api = {}
+
+        function api:Set(newText)
+            lbl.Text = tostring(newText)
+        end
+
+        function api:Object()
+            return lbl
+        end
+
+        function api:Destroy()
+            row:Destroy()
+        end
+
+        return api
+    end
+end
+
+----------------------------------------------------------------
+-- Patch em Window:Tab e Tab:Section para incluir :Label()
+----------------------------------------------------------------
+local _origCreateWindow = WindUI.CreateWindow
+
+WindUI.CreateWindow = function(self, opts)
+    local window = _origCreateWindow(self, opts)
+
+    -- patch em Window:Tab
+    local _origTab = window.Tab or window.TabNew or window.AddTab
+    if _origTab and typeof(_origTab) == "function" then
+        window.Tab = function(winSelf, tabOpts)
+            local tab = _origTab(winSelf, tabOpts)
+            -- injeta :Label no Tab
+            _injectLabelMethod(tab)
+
+            -- patch em Tab:Section
+            local _origSection = tab.Section or tab.AddSection or tab.NewSection
+            if _origSection and typeof(_origSection) == "function" then
+                tab.Section = function(tabSelf, secOpts)
+                    local section = _origSection(tabSelf, secOpts)
+                    _injectLabelMethod(section)
+                    return section
+                end
+            end
+
+            return tab
+        end
+    else
+        warn("[WindUI Patch] Não foi possível localizar Window:Tab; tentando injetar em objetos criados depois.")
+    end
+
+    return window
+end
+
+-- caso alguém crie tabs antes desta sobreposição (improvável), ainda expõe utilitário global
+WindUI._InjectLabelMethod = _injectLabelMethod
+
+----------------------------------------------------------------
+-- Exporta WindUI patchado
+----------------------------------------------------------------
+getgenv().WindUI = WindUI
+return WindUI
+
+--[[ ---------------------- USO (exemplo) -----------------------
+local WindUI = loadstring(game:HttpGet("SEU_RAW_URL_AQUI"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "Meu Hub",
+    Icon = "cpu",
+    Theme = "Dark",
+})
+
+local Tab = Window:Tab({ Title = "Performance", Icon = "cpu" })
+local Section = Tab:Section({ Title = "Stats" })
+
+local fpsLabel = Tab:Label({ Title = "FPS: ..." })
+local pingLabel = Section:Label({ Title = "Ping: ..." })
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    local fps = math.floor(workspace:GetRealPhysicsFPS())
+    local ping = math.floor(game.Players.LocalPlayer:GetNetworkPing() * 1000)
+    fpsLabel:Set("FPS: " .. fps)
+    pingLabel:Set("Ping: " .. ping .. " ms")
+end)
+-------------------------------------------------------------- ]]
