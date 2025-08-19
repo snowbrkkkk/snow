@@ -1,30 +1,27 @@
-
--- Carregar WindUI oficial do Footagesus
+-- Carregar WindUI oficial
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/build/main.lua"))()
 
--- Adicionar suporte a Label dentro das Tabs
+-- Injetar Label dentro das Tabs
 function WindUI.Tab:Label(props)
     local btn = self:Button({
         Title = props.Title or "",
         Desc = "",
-        Locked = true, -- não clicável
+        Locked = true,
         Callback = function() end
     })
 
-    -- Deixar transparente e remover seta
     if btn.Instance then
         btn.Instance.BackgroundTransparency = 1
-        if btn.Instance:FindFirstChild("Arrow") then
-            btn.Instance.Arrow.Visible = false
-        end
+        local arrow = btn.Instance:FindFirstChild("Arrow") or btn.Instance:FindFirstChildOfClass("ImageLabel")
+        if arrow then arrow.Visible = false end
     end
 
     local label = {}
     function label:Set(text)
         btn:SetTitle(text)
     end
+
     return label
 end
 
--- Retornar WindUI modificado
 return WindUI
