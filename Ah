@@ -1,68 +1,30 @@
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/snowbrkkkk/snow/refs/heads/main/ui"))()
 
-local Window = WindUI:CreateWindow({
-    Title = "Snowzinn Hub - Teste",
-    Icon = "snowflake",
-    Author = "Snowzinn",
-    Folder = "SnowHubTest",
-    Size = UDim2.fromOffset(460, 250),
-    Theme = "Dark",
-})
+-- Carregar WindUI oficial do Footagesus
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/build/main.lua"))()
 
-local InfoTab = Window:Tab({
-    Title = "Info",
-    Icon = "info"
-})
-
--- Função para criar "Label dentro da Tab"
-function InfoTab:LabelInside(text)
+-- Adicionar suporte a Label dentro das Tabs
+function WindUI.Tab:Label(props)
     local btn = self:Button({
-        Title = text,
+        Title = props.Title or "",
         Desc = "",
-        Locked = true, -- não clica
+        Locked = true, -- não clicável
         Callback = function() end
     })
 
-    -- deixa transparente e remove a seta
-    btn.Instance.BackgroundTransparency = 1
-    if btn.Instance:FindFirstChild("Arrow") then
-        btn.Instance.Arrow.Visible = false
+    -- Deixar transparente e remover seta
+    if btn.Instance then
+        btn.Instance.BackgroundTransparency = 1
+        if btn.Instance:FindFirstChild("Arrow") then
+            btn.Instance.Arrow.Visible = false
+        end
     end
 
-    return {
-        Set = function(_, newText)
-            btn:SetTitle(newText)
-        end
-    }
+    local label = {}
+    function label:Set(text)
+        btn:SetTitle(text)
+    end
+    return label
 end
 
--- Criando Labels dinâmicos
-local FpsLabel = InfoTab:LabelInside("FPS: ...")
-local PingLabel = InfoTab:LabelInside("Ping: ...")
-local PlayerLabel = InfoTab:LabelInside("Jogadores: ...")
-local PosLabel = InfoTab:LabelInside("Posição: ...")
-
--- Atualização automática
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
-local Player = game.Players.LocalPlayer
-
-RunService.RenderStepped:Connect(function(dt)
-    -- FPS
-    FpsLabel:Set("FPS: " .. math.floor(1/dt))
-
-    -- Ping
-    local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValueString()
-    PingLabel:Set("Ping: " .. ping)
-
-    -- Jogadores
-    PlayerLabel:Set("Jogadores: " .. #game.Players:GetPlayers())
-
-    -- Posição
-    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
-        local pos = Player.Character.HumanoidRootPart.Position
-        PosLabel:Set(string.format("Posição: %.1f, %.1f, %.1f", pos.X, pos.Y, pos.Z))
-    else
-        PosLabel:Set("Posição: N/A")
-    end
-end)
+-- Retornar WindUI modificado
+return WindUI
