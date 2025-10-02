@@ -1,0 +1,62 @@
+-- Função auxiliar
+local function RainbowColor(speed)
+    return Color3.fromHSV((tick() * speed) % 1, 1, 1)
+end
+
+-- Substituir ChangeTheme mantendo compatibilidade
+function RayfieldLibrary:ChangeTheme(userTheme)
+    local c = RainbowColor(0.25)
+
+    local theme = {
+        TextColor = Color3.new(1,1,1),
+        Background = c,
+        Topbar = c,
+        Shadow = c,
+        NotificationBackground = c,
+        NotificationActionsBackground = c,
+        TabBackground = c,
+        TabStroke = c,
+        TabBackgroundSelected = c,
+        TabTextColor = Color3.new(1,1,1),
+        SelectedTabTextColor = Color3.new(1,1,1),
+        ElementBackground = c,
+        ElementBackgroundHover = c,
+        SecondaryElementBackground = c,
+        ElementStroke = c,
+        SecondaryElementStroke = c,
+        SliderBackground = c,
+        SliderProgress = c,
+        SliderStroke = c,
+        ToggleBackground = c,
+        ToggleEnabled = c,
+        ToggleDisabled = Color3.fromRGB(170,170,170),
+        ToggleEnabledStroke = c,
+        ToggleDisabledStroke = Color3.fromRGB(140,140,140),
+        ToggleEnabledOuterStroke = c,
+        ToggleDisabledOuterStroke = Color3.fromRGB(120,120,120),
+        DropdownSelected = c,
+        DropdownUnselected = c,
+        InputBackground = c,
+        InputStroke = c,
+        PlaceholderColor = Color3.fromRGB(200,200,200)
+    }
+
+    -- mescla userTheme se quiser (mas ignorar a cor fixa)
+    -- por exemplo, se userTheme tiver algum campo extra, podemos mesclar:
+    if type(userTheme) == "table" then
+        for k, v in pairs(userTheme) do
+            if theme[k] == nil then
+                theme[k] = v
+            end
+        end
+    end
+
+    -- aplicar o theme (como no original)
+    for setting, value in pairs(theme) do
+        if self.ThemeObjects[setting] then
+            for _, object in pairs(self.ThemeObjects[setting]) do
+                object[1][object[2]] = value
+            end
+        end
+    end
+end
