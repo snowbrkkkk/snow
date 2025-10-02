@@ -1,62 +1,86 @@
--- Função auxiliar
+-- Rayfield-RGB-Patch.lua
+-- Carrega Rayfield oficial e injeta theme RGB animado automaticamente
+
+--⇢ Carregar Rayfield original com proteção
+local ok, Rayfield = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/main/source.lua"))()
+end)
+
+if not ok or not Rayfield then
+    warn("[Rayfield RGB Patch] Falha ao carregar Rayfield original.")
+    return
+end
+
+----------------------------------------------------------------
+-- Função auxiliar para gerar cores RGB dinâmicas
+----------------------------------------------------------------
 local function RainbowColor(speed)
     return Color3.fromHSV((tick() * speed) % 1, 1, 1)
 end
 
--- Substituir ChangeTheme mantendo compatibilidade
-function RayfieldLibrary:ChangeTheme(userTheme)
-    local c = RainbowColor(0.25)
+----------------------------------------------------------------
+-- Patch em ChangeTheme para RGB animado
+----------------------------------------------------------------
+-- Salva referência do ChangeTheme original
+local _origChangeTheme = Rayfield.ChangeTheme or Rayfield.ModifyTheme
 
+-- Sobrescreve ChangeTheme
+Rayfield.ChangeTheme = function(self, ...)
+    local speed = 0.25
+    local rgb = RainbowColor(speed)
+
+    -- tabela de theme RGB
     local theme = {
-        TextColor = Color3.new(1,1,1),
-        Background = c,
-        Topbar = c,
-        Shadow = c,
-        NotificationBackground = c,
-        NotificationActionsBackground = c,
-        TabBackground = c,
-        TabStroke = c,
-        TabBackgroundSelected = c,
+        Background = rgb,
+        Topbar = rgb,
+        Shadow = rgb,
+        NotificationBackground = rgb,
+        NotificationActionsBackground = rgb,
+        TabBackground = rgb,
+        TabStroke = rgb,
+        TabBackgroundSelected = rgb,
         TabTextColor = Color3.new(1,1,1),
         SelectedTabTextColor = Color3.new(1,1,1),
-        ElementBackground = c,
-        ElementBackgroundHover = c,
-        SecondaryElementBackground = c,
-        ElementStroke = c,
-        SecondaryElementStroke = c,
-        SliderBackground = c,
-        SliderProgress = c,
-        SliderStroke = c,
-        ToggleBackground = c,
-        ToggleEnabled = c,
+        ElementBackground = rgb,
+        ElementBackgroundHover = rgb,
+        SecondaryElementBackground = rgb,
+        ElementStroke = rgb,
+        SecondaryElementStroke = rgb,
+        SliderBackground = rgb,
+        SliderProgress = rgb,
+        SliderStroke = rgb,
+        ToggleBackground = rgb,
+        ToggleEnabled = rgb,
         ToggleDisabled = Color3.fromRGB(170,170,170),
-        ToggleEnabledStroke = c,
+        ToggleEnabledStroke = rgb,
         ToggleDisabledStroke = Color3.fromRGB(140,140,140),
-        ToggleEnabledOuterStroke = c,
+        ToggleEnabledOuterStroke = rgb,
         ToggleDisabledOuterStroke = Color3.fromRGB(120,120,120),
-        DropdownSelected = c,
-        DropdownUnselected = c,
-        InputBackground = c,
-        InputStroke = c,
+        DropdownSelected = rgb,
+        DropdownUnselected = rgb,
+        InputBackground = rgb,
+        InputStroke = rgb,
         PlaceholderColor = Color3.fromRGB(200,200,200)
     }
 
-    -- mescla userTheme se quiser (mas ignorar a cor fixa)
-    -- por exemplo, se userTheme tiver algum campo extra, podemos mesclar:
-    if type(userTheme) == "table" then
-        for k, v in pairs(userTheme) do
-            if theme[k] == nil then
-                theme[k] = v
-            end
-        end
-    end
-
-    -- aplicar o theme (como no original)
-    for setting, value in pairs(theme) do
-        if self.ThemeObjects[setting] then
-            for _, object in pairs(self.ThemeObjects[setting]) do
-                object[1][object[2]] = value
-            end
-        end
+    -- chama o original para manter compatibilidade
+    if _origChangeTheme then
+        _origChangeTheme(self, theme)
     end
 end
+
+----------------------------------------------------------------
+-- Loop contínuo para manter o RGB animado mesmo após LoadConfiguration
+----------------------------------------------------------------
+task.spawn(function()
+    while true do
+        task.wait(0.05)
+        Rayfield:ChangeTheme()
+    end
+end)
+
+----------------------------------------------------------------
+-- Exporta Rayfield patchado
+----------------------------------------------------------------
+getgenv().Rayfield = Rayfield
+return Rayfield
